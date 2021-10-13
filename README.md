@@ -21,7 +21,7 @@ Userscripts to add functionality to [Freshdesk][freshdesk].
 
  | Userscript Wiki                           | ![][ico] |  Direct<br>Install  |            Sites            |  Created   |  Updated   |
  | ----------------------------------------- | :------: | :-----------------: | :-------------------------: | :--------: | :--------: |
- | [Freshdesk ticket note assign][ftna-wiki] |          | [install][ftna-raw] | [GF][ftna-gf] [OU][ftna-ou] | 2021.10.13 | 2021.10.13 |
+ | [Freshdesk ticket note agent][ftna-wiki] |          | [install][ftna-raw] | [GF][ftna-gf] [OU][ftna-ou] | 2021.10.13 | 2021.10.13 |
 
   	\* The ![][ico] column indicates that the userscript has been included in the [Freshdesk][freshdesk].
 
@@ -51,13 +51,13 @@ Please write unit test with your code if necessary.
 
 The gem is available as open source under the terms of the [MIT License](LICENSE).
 
-[ftna-wiki]: https://github.com/jinhucheung/freshdesk-userscripts/wiki/freshdesk-ticket-note-assign
+[ftna-wiki]: https://github.com/jinhucheung/freshdesk-userscripts/wiki/freshdesk-ticket-note-agent
 
-[ftna-raw]: https://raw.githubusercontent.com/jinhucheung/freshdesk-userscripts/master/freshdesk-ticket-note-assign.user.js
+[ftna-raw]: https://raw.githubusercontent.com/jinhucheung/freshdesk-userscripts/master/freshdesk-ticket-note-agent.user.js
 
-[ftna-gf]: https://greasyfork.org/en/scripts/_freshdesk-ticket-note-assign
+[ftna-gf]: https://greasyfork.org/en/scripts/_freshdesk-ticket-note-agent
 
-[ftna-ou]: https://openuserjs.org/scripts/jinhucheung/Freshdesk_Ticket_Note_Assign
+[ftna-ou]: https://openuserjs.org/scripts/jinhucheung/Freshdesk_Ticket_Note_Agent
 
 [ico]: https://raw.githubusercontent.com/jinhucheung/freshdesk-userscripts/master/src/images/freshdesk.ico
 
