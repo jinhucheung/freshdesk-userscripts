@@ -27,9 +27,15 @@
     return pathRegex.test(location.pathname)
   }
 
+  const getTicketId = () => {
+    const paths = location.pathname.split('/')
+    return paths[paths.length - 1]
+  }
+
   // get user info
   let userInfo = null
-  const fetchUserInfo = async () => {
+  let csrfToken = null
+  const fetchUserInfo = () => {
     return fetch('/api/_/bootstrap/me', {
       method: 'GET',
       headers: {
@@ -37,6 +43,10 @@
       }
     })
     .then(response => response.json())
+    .then(result => {
+      userInfo = result
+      csrfToken = userInfo.meta.csrf_token
+    })
   }
 
   // get agent list
@@ -51,25 +61,43 @@
       }
     })
     .then(response => response.json())
-    .then(json => agents = json.data.agents || [])
+    .then(result => agents = result.data.agents || [])
   }
 
   let ticket = null
   const fetchTicket = () => {
-    const paths = location.pathname.split('/')
-    const id = paths[paths.length - 1]
-
-    fetch(`/api/_/tickets/${id}`, {
+    fetch(`/api/_/tickets/${getTicketId()}`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json'
       }
     })
     .then(response => response.json())
-    .then(data => {
-      ticket = data.ticket
-      currentAgentId = ticket.responder_id
-      selectedAgentId = ticket.responder_id
+    .then(updateTicket)
+  }
+
+  const updateTicket = (data) => {
+    ticket = data.ticket
+    currentAgentId = ticket.responder_id
+    selectedAgentId = ticket.responder_id
+  }
+
+  const updateTicket = async (data) => {
+    return fetch(`/api/_/tickets/${getTicketId()}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-Token': csrfToken,
+      },
+      body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+  }
+
+  const updateAgent = async (id) => {
+    updateTicket({ responder_id: id })
+    .then(result => {
+      updateTicket(result)
     })
   }
 
@@ -107,23 +135,14 @@
     }
   }
 
-  const getElementOffset = element => {
-    const rect = element.getBoundingClientRect()
-    return {
-      left: rect.left + window.scrollX,
-      top: rect.top + window.scrollY
-    }
-  }
-
   const loadAgentDropdown = () => {
     if (document.querySelector(selectors.agentDropdown)) return
     const agentSlot = document.querySelector(selectors.agentSlot)
-    const { left, top } = getElementOffset(agentSlot)
     const dropdown = document.createElement('div')
     dropdown.id = 'js-ticket-note-agent-slot-dropdown-wormhole'
     dropdown.innerHTML = `
       <div class="dropdown-content ember-basic-dropdown-content ember-power-select-dropdown ember-view ember-basic-dropdown-content--left ember-basic-dropdown-content--above ember-basic-dropdown--transitioned-in"
-        style="top: ${top + 35}px; left: ${left}px; max-height: 300px; width: 300px; overflow: auto;"
+        style="max-height: 300px; width: 300px; overflow: auto;"
         >
         <ul class="ember-power-select-options ember-view" id="js-ticket-note-agent-slot-dropdown-select-options">
           <li class="ember-power-select-option" data-id=""> -- </li>
@@ -142,6 +161,7 @@
       </div>
     `
     document.body.appendChild(dropdown)
+    placeAgentDropdown()
 
     const optionsContainer = document.querySelector('#js-ticket-note-agent-slot-dropdown-select-options')
     optionsContainer.addEventListener('click', e => {
@@ -162,10 +182,10 @@
     if (!content) return
 
     const agentSlot = document.querySelector(selectors.agentSlot)
-    const { left, top } = getElementOffset(agentSlot)
+    const rect = agentSlot.getBoundingClientRect()
 
-    content.style.top = `${top + 35}px`
-    content.style.left = `${left}px`
+    content.style.top = `${rect.top + window.scrollY + 35}px`
+    content.style.left = `${rect.left + window.scrollX}px`
   }
 
   const removeAgentDropdown = () => {
@@ -244,7 +264,10 @@
   }
 
   const assignAgent = () => {
-    console.log('assignAgent')
+    // update assign
+    if (currentAgentId !== selectedAgentId) {
+      updateAgent(selectedAgentId)
+    }
   }
 
   let dropdownObserver = null
@@ -260,6 +283,7 @@
     const target = e.target
     // detect if current element is note button([data-test-email-action-btn="note"])
     if (target.dataset.testEmailActionBtn === 'note') {
+      fetchUserInfo()
       fetchAgents()
       fetchTicket()
       setTimeout(buildAgentFieldOnReplyBox, 0)
@@ -282,7 +306,7 @@
     }
 
     // detect if send a note
-    if ((target.id === 'send-and-set' || (target.className || '').indexOf('send-and-set-item') >= 0) && !target.disabled) {
+    if ((target.id === 'send-and-set' || (target.className || '').indexOf('send-and-set-item') >= 0)) {
       assignAgent()
     }
   })
