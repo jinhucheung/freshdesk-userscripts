@@ -42,6 +42,7 @@
   // get agent list
   let agents = []
   let currentAgentId = null
+  let selectedAgentId = null
   const fetchAgents = () => {
     fetch('/api/_/bootstrap/agents_groups', {
       method: 'GET',
@@ -68,6 +69,7 @@
     .then(data => {
       ticket = data.ticket
       currentAgentId = ticket.responder_id
+      selectedAgentId = ticket.responder_id
     })
   }
 
@@ -120,7 +122,7 @@
     const dropdown = document.createElement('div')
     dropdown.id = 'js-ticket-note-agent-slot-dropdown-wormhole'
     dropdown.innerHTML = `
-      <div class="ember-basic-dropdown-content ember-power-select-dropdown ember-view ember-basic-dropdown-content--left ember-basic-dropdown-content--above ember-basic-dropdown--transitioned-in"
+      <div class="dropdown-content ember-basic-dropdown-content ember-power-select-dropdown ember-view ember-basic-dropdown-content--left ember-basic-dropdown-content--above ember-basic-dropdown--transitioned-in"
         style="top: ${top + 35}px; left: ${left}px; max-height: 300px; width: 300px; overflow: auto;"
         >
         <ul class="ember-power-select-options ember-view" id="js-ticket-note-agent-slot-dropdown-select-options">
@@ -130,8 +132,8 @@
                 <li class="ember-power-select-option"
                   data-id="${agent.id}"
                   data-email="${agent.contact.email}"
-                  aria-selected="${currentAgentId === agent.id}"
-                  aria-current="${currentAgentId === agent.id}"
+                  aria-selected="${selectedAgentId === agent.id}"
+                  aria-current="${selectedAgentId === agent.id}"
                   role="option"
                 >${agent.contact.name}</li>
               `
@@ -146,10 +148,29 @@
       const target = e.target
       if (target.className !== 'ember-power-select-option') return
 
-      currentAgentId = parseInt(target.dataset.id)
-      const currentAgent = agents.find(agent => agent.id === currentAgentId)
-      agentSlot.value = currentAgent && currentAgent.contact.name || ''
+      selectedAgentId = parseInt(target.dataset.id)
+      const selectedAgent = agents.find(agent => agent.id === selectedAgentId)
+      agentSlot.value = selectedAgent && selectedAgent.contact.name || ''
     })
+  }
+
+  const placeAgentDropdown = () => {
+    const dropdown = document.querySelector(selectors.agentDropdown)
+    if (!dropdown) return
+
+    const content = dropdown.querySelector('.dropdown-content')
+    if (!content) return
+
+    const agentSlot = document.querySelector(selectors.agentSlot)
+    const { left, top } = getElementOffset(agentSlot)
+
+    content.style.top = `${top + 35}px`
+    content.style.left = `${left}px`
+  }
+
+  const removeAgentDropdown = () => {
+    const agentDropdown = document.querySelector(selectors.agentDropdown)
+    agentDropdown && agentDropdown.remove()
   }
 
   // add agent assign field to reply box after clicking note button
@@ -188,55 +209,87 @@
       agentSlot.style.boxShadow = ''
     })
     agentSlot.addEventListener('keyup', () => {
-      const options = document.querySelectorAll(`${selectors.agentDropdown} .ember-power-select-option`)
-      if (!options) return
+      setTimeout(() => {
+        const options = document.querySelectorAll(`${selectors.agentDropdown} .ember-power-select-option`)
+        if (!options) return
 
-      const value = agentSlot.value
-      let count = 0
-      options.forEach(option => {
-        const email = option.dataset.email
-        if (!value || option.innerHTML.indexOf(value) >= 0 || email && email.indexOf(value) >= 0) {
-          option.style.display = 'block'
-          count --
+        const value = (agentSlot.value || '').toLowerCase()
+        let count = 0
+        options.forEach(option => {
+          const email = (option.dataset.email || '').toLowerCase()
+          if (!value || option.innerHTML.trim().toLowerCase().indexOf(value) >= 0 || email.indexOf(value) >= 0) {
+            option.style.display = 'block'
+            count --
+          } else {
+            option.style.display = 'none'
+            count ++
+          }
+        })
+
+        const parent = options[0].parentNode
+        const notFoundLi = parent.querySelector('li.not-found')
+        if (count === options.length) {
+          if (!notFoundLi) {
+            const li = document.createElement('li')
+            li.className = 'not-found'
+            li.innerHTML = 'No results found'
+            li.style.padding = '7px 30px 7px 8px'
+            parent.appendChild(li)
+          }
         } else {
-          option.style.display = 'none'
-          count ++
+          notFoundLi && notFoundLi.remove()
         }
-      })
-
-      const parent = options[0].parentNode
-      const notFoundLi = parent.querySelector('li.not-found')
-      if (count === options.length) {
-        if (!notFoundLi) {
-          const li = document.createElement('li')
-          li.className = 'not-found'
-          li.innerHTML = 'No results found'
-          li.style.padding = '7px 30px 7px 8px'
-          parent.appendChild(li)
-        }
-      } else {
-        notFoundLi && notFoundLi.remove()
-      }
+      },500)
     })
   }
 
+  const assignAgent = () => {
+    console.log('assignAgent')
+  }
+
+  let dropdownObserver = null
+
   document.body.addEventListener('click', e => {
     // detect if current url is ticket page
-    if (!isTicketPage()) return
+    if (!isTicketPage()) {
+      dropdownObserver && dropdownObserver.disconnect()
+      dropdownObserver = null
+      return
+    }
 
     const target = e.target
-
     // detect if current element is note button([data-test-email-action-btn="note"])
     if (target.dataset.testEmailActionBtn === 'note') {
       fetchAgents()
       fetchTicket()
       setTimeout(buildAgentFieldOnReplyBox, 0)
+
+      // close agent dropdown after other dropdown showed
+      const dropdownContainer = document.querySelector('#ember-basic-dropdown-wormhole')
+      if (dropdownContainer && !dropdownObserver) {
+        dropdownObserver = new MutationObserver(() => {
+          setTimeout(() => {
+            dropdownContainer.innerHTML && removeAgentDropdown()
+          }, 0)
+        })
+        dropdownObserver.observe(dropdownContainer, { childList: true, subtree: true })
+      }
     }
 
     // detect if agent dropdown needs to hide
     if (!agentDropdownSelectors.includes(target.id)) {
-      const agentDropdown = document.querySelector(selectors.agentDropdown)
-      agentDropdown && agentDropdown.remove()
+      removeAgentDropdown()
     }
+
+    // detect if send a note
+    if ((target.id === 'send-and-set' || (target.className || '').indexOf('send-and-set-item') >= 0) && !target.disabled) {
+      assignAgent()
+    }
+  })
+
+  window.addEventListener('resize', () => {
+    if (!isTicketPage()) return
+
+    placeAgentDropdown()
   })
 })()

@@ -19,11 +19,11 @@ Userscripts to add functionality to [Freshdesk][freshdesk].
 	* Install a script from [GreasyFork](https://greasyfork.org/en/users/693969-jinhucheung) (GF) from the userscript site page
 	* Or, install the scripts from [OpenUserJS](https://openuserjs.org/users/jinhucheung/scripts) (OU).<br><br>
 
- | Userscript Wiki                           | ![][ico] |  Direct<br>Install  |            Sites            |  Created   |  Updated   |
- | ----------------------------------------- | :------: | :-----------------: | :-------------------------: | :--------: | :--------: |
- | [Freshdesk ticket note agent][ftna-wiki] |          | [install][ftna-raw] | [GF][ftna-gf] [OU][ftna-ou] | 2021.10.13 | 2021.10.13 |
+ | Userscript Wiki                          | ![][ico] |  Direct<br>Install  |            Sites            |  Created   |  Updated   |
+ | ---------------------------------------- | :------: | :-----------------: | :-------------------------: | :--------: | :--------: |
+ | [Freshdesk ticket note agent][ftna-wiki] |          | [install][ftna-raw] | [GF][ftna-gf] [OU][ftna-ou] | 2021.10.13 | 2021.10.14 |
 
-  	\* The ![][ico] column indicates that the userscript has been included in the [Freshdesk][freshdesk].
+  \* The ![][ico] column indicates that the userscript has been included in the [Freshdesk][freshdesk].
 
 
  | Deprecated Userscript Wiki | Direct<br>Install | Sites | Created | Deprecated |
