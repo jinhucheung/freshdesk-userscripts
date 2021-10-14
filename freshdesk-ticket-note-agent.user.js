@@ -65,6 +65,13 @@
   }
 
   let ticket = null
+
+  const updateTicketData = (data) => {
+    ticket = data.ticket
+    currentAgentId = ticket.responder_id
+    selectedAgentId = ticket.responder_id
+  }
+
   const fetchTicket = () => {
     fetch(`/api/_/tickets/${getTicketId()}`, {
       method: 'GET',
@@ -73,13 +80,7 @@
       }
     })
     .then(response => response.json())
-    .then(updateTicket)
-  }
-
-  const updateTicket = (data) => {
-    ticket = data.ticket
-    currentAgentId = ticket.responder_id
-    selectedAgentId = ticket.responder_id
+    .then(updateTicketData)
   }
 
   const updateTicket = async (data) => {
@@ -96,8 +97,9 @@
 
   const updateAgent = async (id) => {
     updateTicket({ responder_id: id })
-    .then(result => {
-      updateTicket(result)
+    .then(updateTicketData)
+    .then(() => {
+
     })
   }
 
@@ -145,10 +147,11 @@
         style="max-height: 300px; width: 300px; overflow: auto;"
         >
         <ul class="ember-power-select-options ember-view" id="js-ticket-note-agent-slot-dropdown-select-options">
-          <li class="ember-power-select-option" data-id=""> -- </li>
-          ${agents.map(agent => {
+          <li class="ember-power-select-option" data-id="" data-index="0"> -- </li>
+          ${agents.map((agent, index) => {
               return `
                 <li class="ember-power-select-option"
+                  data-index="${index + 1}"
                   data-id="${agent.id}"
                   data-email="${agent.contact.email}"
                   aria-selected="${selectedAgentId === agent.id}"
@@ -270,8 +273,28 @@
     }
   }
 
-  let dropdownObserver = null
+  const seekSelectedAgentInSide = (mutations) => {
+    // after clicked new agent
+    let lastSelectedAgent = null
+    mutations.forEach(m => {
+      if (!(m.removedNodes && m.removedNodes[0])) return
+      const optionsNode = m.removedNodes[0].children && m.removedNodes[0].children[0]
+      if (!optionsNode) return
+      const optionsView = optionsNode.children && optionsNode.children[0]
+      if (!optionsView) return
+      const options = optionsView.children
+      if (!options) return
+      for (let option of options) {
+        if (option.ariaSelected === 'true') {
+          selectedAgentSideNode = option
+          break
+        }
+      }
+      console.log(lastSelectedAgent)
+    })
+  }
 
+  let dropdownObserver = null
   document.body.addEventListener('click', e => {
     // detect if current url is ticket page
     if (!isTicketPage()) {
@@ -291,7 +314,8 @@
       // close agent dropdown after other dropdown showed
       const dropdownContainer = document.querySelector('#ember-basic-dropdown-wormhole')
       if (dropdownContainer && !dropdownObserver) {
-        dropdownObserver = new MutationObserver(() => {
+        dropdownObserver = new MutationObserver((mutations) => {
+          seekSelectedAgentInSide(mutations)
           setTimeout(() => {
             dropdownContainer.innerHTML && removeAgentDropdown()
           }, 0)
