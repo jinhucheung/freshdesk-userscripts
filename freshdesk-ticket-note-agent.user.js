@@ -15,329 +15,356 @@
 (() => {
   'use strict'
 
-  const selectors = {
-    agentSlot: '#js-ticket-note-agent-slot',
-    agentDropdown: '#js-ticket-note-agent-slot-dropdown-wormhole'
-  }
-  const agentDropdownSelectors = [selectors.agentDropdown, selectors.agentSlot].map(i => i.replace('#', ''))
-
-  // detect if current url is ticket page
-  const isTicketPage = () => {
-    const pathRegex = new RegExp('^/a/tickets/\\d+$')
-    return pathRegex.test(location.pathname)
-  }
-
-  const getTicketId = () => {
-    const paths = location.pathname.split('/')
-    return paths[paths.length - 1]
+  // constants
+  const cssSelectors = {
+    basicDropdown: '#ember-basic-dropdown-wormhole',
+    ticketProperties: '.__module-tickets__ticket-details__properties',
+    noteAgentField: '#ticket-note-agent-field',
+    noteAgentInput: '#ticket-note-agent-input',
+    noteAgentDropdown: '#ticket-note-agent-dropdown-wormhole',
+    noteAgentDropdownOptionList: '#ticket-note-agent-dropdown-option-list',
+    noteAgentNotFound: '#ticket-note-agent-not-found',
+    noteEmailField: '[data-test-notify-to]',
+    propertyAgentLabel: '[data-test-id="agent"] .label-field'
   }
 
-  // get user info
-  let userInfo = null
-  let csrfToken = null
-  const fetchUserInfo = () => {
-    return fetch('/api/_/bootstrap/me', {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json'
-      }
-    })
-    .then(response => response.json())
-    .then(result => {
-      userInfo = result
-      csrfToken = userInfo.meta.csrf_token
-    })
-  }
+  // data
+  let dropdownObserver = null
 
-  // get agent list
-  let agents = []
-  let currentAgentId = null
-  let selectedAgentId = null
-  const fetchAgents = () => {
-    fetch('/api/_/bootstrap/agents_groups', {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json'
-      }
-    })
-    .then(response => response.json())
-    .then(result => agents = result.data.agents || [])
-  }
-
-  let ticket = null
-
-  const updateTicketData = (data) => {
-    ticket = data.ticket
-    currentAgentId = ticket.responder_id
-    selectedAgentId = ticket.responder_id
-  }
-
-  const fetchTicket = () => {
-    fetch(`/api/_/tickets/${getTicketId()}`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json'
-      }
-    })
-    .then(response => response.json())
-    .then(updateTicketData)
-  }
-
-  const updateTicket = async (data) => {
-    return fetch(`/api/_/tickets/${getTicketId()}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-CSRF-Token': csrfToken,
-      },
-      body: JSON.stringify(data)
-    })
-    .then(response => response.json())
-  }
-
-  const updateAgent = async (id) => {
-    updateTicket({ responder_id: id })
-    .then(updateTicketData)
-    .then(() => {
-
-    })
-  }
-
-  // get user locale
-  // result: en, jp, zh, zh-tw
-  const languages = {
-    'en': 'en',
-    'jp': 'jp',
-    'ja': 'jp',
-    'ja-jp': 'jp',
-    'zh': 'zh',
-    'zh-cn': 'zh',
-    'zh-tw': 'zh-tw',
-    'zh-hk': 'zh-tw'
-  }
-
-  const getLanguage = () => {
-    const content = localStorage.getItem('storage:user-locale')
-    const language  = (content && JSON.parse(content)['userLanguage'] || 'en').toLowerCase()
-    return languages[language]
-  }
-
-  const locales = {
-    'en': {
-      'agent': 'Agent',
-    },
-    'jp': {
-      'agent': 'エージェント'
-    },
-    'zh': {
-      'agent': '代理者'
-    },
-    'zh-tw': {
-      'agent': '代理者'
+  // entry
+  document.body.addEventListener('click', e => {
+    if (!isTicketPath() || !getTicket()) {
+      removeObserver()
+      return
     }
+
+    if (isTargetOf('addNote', e.target)) {
+      setTimeout(renderNoteAgentField, 0)
+      addObserver()
+    }
+
+    if (isTargetOf('sendNote', e.target)) {
+      assignResponder()
+    }
+
+    if (!isTargetOf('noteAgent', e.target)) {
+      removeNoteAgentDropdown()
+    }
+  })
+
+  window.addEventListener('resize', () => {
+    if (!isTicketPath() && !getTicket()) return
+
+    locateNoteAgentDropdown()
+  })
+
+  // elements
+  function createNoteAgentField(name, value) {
+    const element = document.createElement('div')
+    element.id = 'ticket-note-agent-field'
+    element.className = 'ticket-action__fields can-edit'
+    element.innerHTML = `
+      <div class="ticket-action__field ticket-action__label text__infotext mt-11">${name}: </div>
+      <div class="ticket-action__field mt-10 ml-10" style="width: 300px;">
+        <input id="ticket-note-agent-input" data-group="note-agent" value="${value || ' -- '}"
+          style="border: none; box-shadow: none; outline: none; width: 100%; border-radius: 4px; padding: 4px 8px;" />
+      </div>
+    `
+    return element
   }
 
-  const loadAgentDropdown = () => {
-    if (document.querySelector(selectors.agentDropdown)) return
-    const agentSlot = document.querySelector(selectors.agentSlot)
-    const dropdown = document.createElement('div')
-    dropdown.id = 'js-ticket-note-agent-slot-dropdown-wormhole'
-    dropdown.innerHTML = `
+  function createNoteAgentDropdown(ticket, agents) {
+    const element = document.createElement('div')
+    element.id = 'ticket-note-agent-dropdown-wormhole'
+    element.innerHTML = `
       <div class="dropdown-content ember-basic-dropdown-content ember-power-select-dropdown ember-view ember-basic-dropdown-content--left ember-basic-dropdown-content--above ember-basic-dropdown--transitioned-in"
         style="max-height: 300px; width: 300px; overflow: auto;"
         >
-        <ul class="ember-power-select-options ember-view" id="js-ticket-note-agent-slot-dropdown-select-options">
-          <li class="ember-power-select-option" data-id="" data-index="0"> -- </li>
-          ${agents.map((agent, index) => {
+        <ul class="ember-power-select-options ember-view" id="ticket-note-agent-dropdown-option-list">
+          <li class="ember-power-select-option" role="option"> -- </li>
+          ${agents && agents.map(agent => {
               return `
                 <li class="ember-power-select-option"
-                  data-index="${index + 1}"
                   data-id="${agent.id}"
-                  data-email="${agent.contact.email}"
-                  aria-selected="${selectedAgentId === agent.id}"
-                  aria-current="${selectedAgentId === agent.id}"
+                  data-email="${agent.email}"
+                  aria-selected="${agent.id == ticket.responderId}"
+                  aria-current="${agent.id == ticket.responderId}"
                   role="option"
-                >${agent.contact.name}</li>
+                >${agent.name}</li>
               `
             }).join('')}
         </ul>
       </div>
     `
-    document.body.appendChild(dropdown)
-    placeAgentDropdown()
-
-    const optionsContainer = document.querySelector('#js-ticket-note-agent-slot-dropdown-select-options')
-    optionsContainer.addEventListener('click', e => {
-      const target = e.target
-      if (target.className !== 'ember-power-select-option') return
-
-      selectedAgentId = parseInt(target.dataset.id)
-      const selectedAgent = agents.find(agent => agent.id === selectedAgentId)
-      agentSlot.value = selectedAgent && selectedAgent.contact.name || ''
-    })
+    return element
   }
 
-  const placeAgentDropdown = () => {
-    const dropdown = document.querySelector(selectors.agentDropdown)
+  function createNoteAgentNotFound() {
+    const element = document.createElement('li')
+    element.id = 'not-found'
+    element.innerHTML = 'No results found'
+    element.style.padding = '7px 30px 7px 8px'
+    return element
+  }
+
+  function renderNoteAgentField() {
+    if (getNoteAgentField()) return
+
+    const noteEmailField = getNoteEmailField()
+    if (!noteEmailField) return
+
+    const responder = getResponder()
+    const propertyAgentLabel = getPropertyAgentLabel()
+    const noteAgentField = createNoteAgentField(propertyAgentLabel.title, responder.name)
+    noteEmailField.parentNode.insertBefore(noteAgentField, noteEmailField)
+
+    observeNoteAgentField()
+  }
+
+  function renderNoteAgentDropdown() {
+    if (getNoteAgentDropdown()) return
+
+    const dropdown = createNoteAgentDropdown(getTicket(), getAgents())
+    document.body.appendChild(dropdown)
+
+    locateNoteAgentDropdown()
+    observeNoteAgentDropdown()
+  }
+
+  function locateNoteAgentDropdown() {
+    const dropdown = getNoteAgentDropdown()
     if (!dropdown) return
 
-    const content = dropdown.querySelector('.dropdown-content')
-    if (!content) return
+    const dropdownContent = dropdown.querySelector('.dropdown-content')
+    if (!dropdownContent) return
 
-    const agentSlot = document.querySelector(selectors.agentSlot)
-    const rect = agentSlot.getBoundingClientRect()
+    const noteAgentInput = getNoteAgentInput()
+    if (!noteAgentInput) return
+    const noteAgentInputRect = noteAgentInput.getBoundingClientRect()
 
-    content.style.top = `${rect.top + window.scrollY + 35}px`
-    content.style.left = `${rect.left + window.scrollX}px`
+    dropdownContent.style.top = `${noteAgentInputRect.top + window.scrollY + 35}px`
+    dropdownContent.style.left = `${noteAgentInputRect.left + window.scrollX}px`
   }
 
-  const removeAgentDropdown = () => {
-    const agentDropdown = document.querySelector(selectors.agentDropdown)
-    agentDropdown && agentDropdown.remove()
+  function removeNoteAgentDropdown() {
+    const dropdown = getNoteAgentDropdown()
+    dropdown && dropdown.remove()
   }
 
-  // add agent assign field to reply box after clicking note button
-  const buildAgentFieldOnReplyBox = ()=> {
-    const emailField = document.querySelector('[data-test-notify-to]')
-    if (!emailField) return
+  function filterNoteAgentOptions(value) {
+    const list = getNoteAgentDropdownOptionList()
+    if (!list) return true
 
-    if (document.querySelector(selectors.agentSlot)) return
+    const options = list.querySelectorAll('li')
+    if (!options) return true
 
-    const language = getLanguage()
-    const locale = locales[language]
-
-    const selectedAgentField = document.querySelector('[data-test-id="group-agent"] .ember-power-select-selected-item')
-    const selectedAgent = selectedAgentField && selectedAgentField.innerHTML.trim() || ''
-
-    const agentField = document.createElement('div')
-    agentField.className = 'ticket-action__fields can-edit'
-    agentField.innerHTML = `
-      <div class="ticket-action__field ticket-action__label text__infotext mt-11">${locale.agent}：: </div>
-      <div class="ticket-action__field mt-10 ml-10" style="width: 300px;">
-        <input id="js-ticket-note-agent-slot" value="${selectedAgent}"
-          style="border: none; box-shadow: none; outline: none; width: 100%; border-radius: 4px; padding: 4px 8px;" />
-      </div>
-    `
-    emailField.parentNode.insertBefore(agentField, emailField)
-
-    const agentSlot = document.querySelector(selectors.agentSlot)
-
-    agentSlot.addEventListener('click', e => {
-      loadAgentDropdown()
+    const formattedValue = (value || '').toLowerCase()
+    let resultCount = options.length
+    options.forEach(option => {
+      const email = (option.dataset.email || '').toLowerCase()
+      if (!formattedValue || option.innerHTML.trim().toLowerCase().indexOf(formattedValue) >= 0 || email.indexOf(formattedValue) >= 0) {
+        option.style.display = 'block'
+      } else {
+        option.style.display = 'none'
+        resultCount --
+      }
     })
-    agentSlot.addEventListener('focus', () => {
-      agentSlot.style.boxShadow = '0 0 0 2px #2c5cc5'
+
+    return resultCount > 0
+  }
+
+  function observeNoteAgentField() {
+    const noteAgentInput = getNoteAgentInput()
+    if (!noteAgentInput) return
+
+    noteAgentInput.addEventListener('focus', () => {
+      noteAgentInput.style.boxShadow = '0 0 0 2px #2c5cc5'
+      noteAgentInput.select()
     })
-    agentSlot.addEventListener('blur', () => {
-      agentSlot.style.boxShadow = ''
+
+    noteAgentInput.addEventListener('blur', () => {
+      noteAgentInput.style.boxShadow = ''
     })
-    agentSlot.addEventListener('keyup', () => {
+
+    noteAgentInput.addEventListener('click', () => {
+      renderNoteAgentDropdown()
+    })
+
+    noteAgentInput.addEventListener('keyup', () => {
       setTimeout(() => {
-        const options = document.querySelectorAll(`${selectors.agentDropdown} .ember-power-select-option`)
-        if (!options) return
-
-        const value = (agentSlot.value || '').toLowerCase()
-        let count = 0
-        options.forEach(option => {
-          const email = (option.dataset.email || '').toLowerCase()
-          if (!value || option.innerHTML.trim().toLowerCase().indexOf(value) >= 0 || email.indexOf(value) >= 0) {
-            option.style.display = 'block'
-            count --
-          } else {
-            option.style.display = 'none'
-            count ++
-          }
-        })
-
-        const parent = options[0].parentNode
-        const notFoundLi = parent.querySelector('li.not-found')
-        if (count === options.length) {
-          if (!notFoundLi) {
-            const li = document.createElement('li')
-            li.className = 'not-found'
-            li.innerHTML = 'No results found'
-            li.style.padding = '7px 30px 7px 8px'
-            parent.appendChild(li)
-          }
-        } else {
-          notFoundLi && notFoundLi.remove()
+        const hasResult = filterNoteAgentOptions(noteAgentInput.value)
+        const notFound = getNoteAgentNotFound()
+        if (hasResult) {
+          notFound && notFound.remove()
+        } else if (!notFound) {
+          const optionList = getNoteAgentDropdownOptionList()
+          optionList && optionList.appendChild(createNoteAgentNotFound())
         }
-      },500)
+      }, 500)
     })
   }
 
-  const assignAgent = () => {
-    // update assign
-    if (currentAgentId !== selectedAgentId) {
-      updateAgent(selectedAgentId)
-    }
-  }
-
-  const seekSelectedAgentInSide = (mutations) => {
-    // after clicked new agent
-    let lastSelectedAgent = null
-    mutations.forEach(m => {
-      if (!(m.removedNodes && m.removedNodes[0])) return
-      const optionsNode = m.removedNodes[0].children && m.removedNodes[0].children[0]
-      if (!optionsNode) return
-      const optionsView = optionsNode.children && optionsNode.children[0]
-      if (!optionsView) return
-      const options = optionsView.children
-      if (!options) return
-      for (let option of options) {
-        if (option.ariaSelected === 'true') {
-          selectedAgentSideNode = option
-          break
-        }
+  function observeNoteAgentDropdown() {
+    const optionList = getNoteAgentDropdownOptionList()
+    optionList && optionList.addEventListener('click', e => {
+      if (e.target.getAttribute('role') === 'option') {
+        setResponder(e.target.dataset.id)
       }
-      console.log(lastSelectedAgent)
     })
   }
 
-  let dropdownObserver = null
-  document.body.addEventListener('click', e => {
-    // detect if current url is ticket page
-    if (!isTicketPage()) {
-      dropdownObserver && dropdownObserver.disconnect()
-      dropdownObserver = null
-      return
+  function addObserver() {
+    observeTicket()
+    observeDropdown()
+  }
+
+  function removeObserver() {
+    dropdownObserver && dropdownObserver.disconnect()
+    dropdownObserver = null
+  }
+
+  function observeTicket() {
+    const ticket = getTicket()
+    ticket && ticket.addObserver('responderId', handleResponderChanged)
+  }
+
+  function observeDropdown() {
+    if (dropdownObserver) return
+
+    const basicDropdown = getBasicDropdown()
+    if (!basicDropdown) return
+
+    dropdownObserver = new MutationObserver(() => {
+      setTimeout(() => {
+        basicDropdown.innerHTML && removeNoteAgentDropdown()
+      }, 0)
+    })
+    dropdownObserver.observe(basicDropdown, { childList: true, subtree: true })
+  }
+
+  function handleResponderChanged() {
+    console.log('handleResponderChanged')
+    const noteAgentInput = getNoteAgentInput()
+    if (noteAgentInput) noteAgentInput.value = getResponder().name || ' -- '
+  }
+
+  function getBasicDropdown() {
+    return document.querySelector(cssSelectors.basicDropdown)
+  }
+
+  function getNoteAgentField() {
+    return document.querySelector(cssSelectors.noteAgentField)
+  }
+
+  function getNoteAgentInput() {
+    return document.querySelector(cssSelectors.noteAgentInput)
+  }
+
+  function getNoteAgentDropdown() {
+    return document.querySelector(cssSelectors.noteAgentDropdown)
+  }
+
+  function getNoteAgentDropdownOptionList() {
+    return document.querySelector(cssSelectors.noteAgentDropdownOptionList)
+  }
+
+  function getNoteAgentNotFound() {
+    return document.querySelector(cssSelectors.noteAgentNotFound)
+  }
+
+  function getNoteEmailField() {
+    return document.querySelector(cssSelectors.noteEmailField)
+  }
+
+  function getPropertyAgentLabel() {
+    return document.querySelector(cssSelectors.propertyAgentLabel)
+  }
+
+  // methods
+  function getApp() {
+    const apps = Ember.A(Ember.Namespace.NAMESPACES)
+    return apps[apps.length - 1]
+  }
+
+  function getPath() {
+    return getApp().__container__.lookup('controller:application').get('currentPath')
+  }
+
+  function getTicket() {
+    const node = document.querySelector(cssSelectors.ticketProperties)
+    if (!(node && node.id)) return
+    return getApp().__container__.lookup('-view-registry:main')[node.id].ticket
+  }
+
+  function getAccount() {
+    const ticket = getTicket()
+    return ticket && ticket.currentAccount
+  }
+
+  function getAgents() {
+    const account = getAccount()
+    return account && account.agents && account.agents.currentState.map(agent => agent.__data.contact)
+  }
+
+  function getResponder() {
+    const ticket = getTicket()
+    if (!ticket || !ticket.responderId) return {}
+
+    const agents = getAgents()
+    if (!agents) return {}
+
+    const responder = agents.find(agent => agent.id == ticket.responderId)
+    return responder || {}
+  }
+
+  function getMeta() {
+    const account = getAccount()
+    return account && account.meta
+  }
+
+  function setResponder(id) {
+    const ticket = getTicket()
+    ticket && ticket.set('responderId', parseInt(id))
+  }
+
+  function assignResponder() {
+    const responder = getResponder()
+    responder && updateResponder(responder.id)
+  }
+
+  function isTicketPath() {
+    return getPath() === 'helpdesk.tickets.show'
+  }
+
+  function isTargetOf(name, target) {
+    switch (name) {
+      case 'addNote':
+        // [add note] button
+        return target.dataset.testEmailActionBtn === 'note'
+      case 'sendNote':
+        // [Add note] button / [Add note and set as xxx] button
+        return target.id === 'send-and-set' || (target.getAttribute('class') || '').indexOf('send-and-set-item') >= 0
+      case 'noteAgent':
+        // [Agent] field in note box
+        return target.dataset.group === 'note-agent'
+      default:
+        return false
     }
 
-    const target = e.target
-    // detect if current element is note button([data-test-email-action-btn="note"])
-    if (target.dataset.testEmailActionBtn === 'note') {
-      fetchUserInfo()
-      fetchAgents()
-      fetchTicket()
-      setTimeout(buildAgentFieldOnReplyBox, 0)
+  }
 
-      // close agent dropdown after other dropdown showed
-      const dropdownContainer = document.querySelector('#ember-basic-dropdown-wormhole')
-      if (dropdownContainer && !dropdownObserver) {
-        dropdownObserver = new MutationObserver((mutations) => {
-          seekSelectedAgentInSide(mutations)
-          setTimeout(() => {
-            dropdownContainer.innerHTML && removeAgentDropdown()
-          }, 0)
-        })
-        dropdownObserver.observe(dropdownContainer, { childList: true, subtree: true })
-      }
-    }
-
-    // detect if agent dropdown needs to hide
-    if (!agentDropdownSelectors.includes(target.id)) {
-      removeAgentDropdown()
-    }
-
-    // detect if send a note
-    if ((target.id === 'send-and-set' || (target.className || '').indexOf('send-and-set-item') >= 0)) {
-      assignAgent()
-    }
-  })
-
-  window.addEventListener('resize', () => {
-    if (!isTicketPage()) return
-
-    placeAgentDropdown()
-  })
+  // api
+  async function updateResponder(id) {
+    const formattedId = id && parseInt(id) || null
+    return fetch(`/api/_/tickets/${getTicket().id}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-Token': getMeta().csrf_token,
+      },
+      body: JSON.stringify({ responder_id: formattedId })
+    })
+    .then(response => response.json())
+    .catch(console.error)
+  }
 })()
