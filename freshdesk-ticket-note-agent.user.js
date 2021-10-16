@@ -8,7 +8,7 @@
 // @include     https://*.freshdesk.com/*
 // @run-at      document-idle
 // @grant       none
-// @icon        https://raw.githubusercontent.com/jinhucheung/freshdesk-userscripts/main/src/images/freshdesk.ico
+// @icon        https://raw.githubusercontent.com/jinhucheung/freshdesk-userscripts/main/images/freshdesk.ico
 // @updateURL   https://raw.githubusercontent.com/jinhucheung/freshdesk-userscripts/main/freshdesk-ticket-note-agent.user.js
 // @downloadURL https://raw.githubusercontent.com/jinhucheung/freshdesk-userscripts/main/freshdesk-ticket-note-agent.user.js
 // ==/UserScript==
