@@ -25,6 +25,7 @@
     noteAgentDropdownOptionList: '#ticket-note-agent-dropdown-option-list',
     noteAgentNotFound: '#ticket-note-agent-not-found',
     noteEmailField: '[data-test-notify-to]',
+    noteEmailSelectField: '[data-test-notify-to] .ticket-action__email > .ember-view',
     propertyAgentLabel: '[data-test-id="agent"] .label-field'
   }
 
@@ -166,7 +167,7 @@
         option.style.display = 'block'
       } else {
         option.style.display = 'none'
-        resultCount --
+        resultCount--
       }
     })
 
@@ -243,9 +244,12 @@
   }
 
   function handleResponderChanged() {
-    console.log('handleResponderChanged')
+    const responder = getResponder()
+
     const noteAgentInput = getNoteAgentInput()
-    if (noteAgentInput) noteAgentInput.value = getResponder().name || ' -- '
+    if (noteAgentInput) noteAgentInput.value = responder.name || ' -- '
+
+    setEmailTo(responder)
   }
 
   function getBasicDropdown() {
@@ -296,6 +300,12 @@
     return getApp().__container__.lookup('-view-registry:main')[node.id].ticket
   }
 
+  function getEmailTo() {
+    const node = document.querySelector(cssSelectors.noteEmailSelectField)
+    if (!node && node.id) return
+    return getApp().__container__.lookup('-view-registry:main')[node.id]
+  }
+
   function getAccount() {
     const ticket = getTicket()
     return ticket && ticket.currentAccount
@@ -320,6 +330,16 @@
   function getMeta() {
     const account = getAccount()
     return account && account.meta
+  }
+
+  function setEmailTo(responder) {
+    const emailTo = getEmailTo()
+    if (!emailTo && emailTo.options) return
+
+    const selects = []
+    const option = emailTo.options.content.find(option => option.id == responder.id)
+    if (option && option._record) selects.push(option._record)
+    emailTo.set('selected', selects)
   }
 
   function setResponder(id) {

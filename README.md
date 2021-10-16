@@ -21,7 +21,7 @@ Userscripts to add functionality to [Freshdesk][freshdesk].
 
  | Userscript Wiki                          | ![][ico] |  Direct<br>Install  |            Sites            |  Created   |  Updated   |
  | ---------------------------------------- | :------: | :-----------------: | :-------------------------: | :--------: | :--------: |
- | [Freshdesk ticket note agent][ftna-wiki] |          | [install][ftna-raw] | [GF][ftna-gf] [OU][ftna-ou] | 2021.10.13 | 2021.10.14 |
+ | [Freshdesk ticket note agent][ftna-wiki] |          | [install][ftna-raw] | [GF][ftna-gf] [OU][ftna-ou] | 2021.10.13 | 2021.10.16 |
 
   \* The ![][ico] column indicates that the userscript has been included in the [Freshdesk][freshdesk].
 
