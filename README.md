@@ -51,11 +51,11 @@ Please write unit test with your code if necessary.
 
 The gem is available as open source under the terms of the [MIT License](LICENSE).
 
-[ftna-wiki]: https://github.com/jinhucheung/freshdesk-userscripts/wiki/freshdesk-ticket-note-agent
+[ftna-wiki]: https://github.com/jinhucheung/freshdesk-userscripts/wiki/Freshdesk-Ticket-Note-Agent
 
 [ftna-raw]: https://raw.githubusercontent.com/jinhucheung/freshdesk-userscripts/main/freshdesk-ticket-note-agent.user.js
 
-[ftna-gf]: https://greasyfork.org/en/scripts/_freshdesk-ticket-note-agent
+[ftna-gf]: https://greasyfork.org/en/scripts/433975-freshdesk-ticket-note-agent
 
 [ftna-ou]: https://openuserjs.org/scripts/jinhucheung/Freshdesk_Ticket_Note_Agent
 
