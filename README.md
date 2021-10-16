@@ -53,12 +53,12 @@ The gem is available as open source under the terms of the [MIT License](LICENSE
 
 [ftna-wiki]: https://github.com/jinhucheung/freshdesk-userscripts/wiki/freshdesk-ticket-note-agent
 
-[ftna-raw]: https://raw.githubusercontent.com/jinhucheung/freshdesk-userscripts/master/freshdesk-ticket-note-agent.user.js
+[ftna-raw]: https://raw.githubusercontent.com/jinhucheung/freshdesk-userscripts/main/freshdesk-ticket-note-agent.user.js
 
 [ftna-gf]: https://greasyfork.org/en/scripts/_freshdesk-ticket-note-agent
 
 [ftna-ou]: https://openuserjs.org/scripts/jinhucheung/Freshdesk_Ticket_Note_Agent
 
-[ico]: https://raw.githubusercontent.com/jinhucheung/freshdesk-userscripts/master/src/images/freshdesk.ico
+[ico]: https://raw.githubusercontent.com/jinhucheung/freshdesk-userscripts/main/images/freshdesk.ico
 
 [freshdesk]: https://freshdesk.com/
