@@ -286,7 +286,7 @@
 
   // methods
   function getApp() {
-    const apps = Ember.A(Ember.Namespace.NAMESPACES)
+    const apps = window.Ember.A(window.Ember.Namespace.NAMESPACES)
     return apps[apps.length - 1]
   }
 
