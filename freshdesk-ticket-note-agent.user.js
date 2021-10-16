@@ -18,7 +18,6 @@
   // constants
   const cssSelectors = {
     basicDropdown: '#ember-basic-dropdown-wormhole',
-    ticketProperties: '.__module-tickets__ticket-details__properties',
     noteAgentField: '#ticket-note-agent-field',
     noteAgentInput: '#ticket-note-agent-input',
     noteAgentDropdown: '#ticket-note-agent-dropdown-wormhole',
@@ -26,6 +25,7 @@
     noteAgentNotFound: '#ticket-note-agent-not-found',
     noteEmailField: '[data-test-notify-to]',
     noteEmailSelectField: '[data-test-notify-to] .ticket-action__email > .ember-view',
+    ticketProperties: '.__module-tickets__ticket-details__properties',
     propertyAgentLabel: '[data-test-id="agent"] .label-field'
   }
 
@@ -295,15 +295,8 @@
   }
 
   function getTicket() {
-    const node = document.querySelector(cssSelectors.ticketProperties)
-    if (!(node && node.id)) return
-    return getApp().__container__.lookup('-view-registry:main')[node.id].ticket
-  }
-
-  function getEmailTo() {
-    const node = document.querySelector(cssSelectors.noteEmailSelectField)
-    if (!node && node.id) return
-    return getApp().__container__.lookup('-view-registry:main')[node.id]
+    const view = lookupView(cssSelectors.ticketProperties)
+    return view && view.ticket
   }
 
   function getAccount() {
@@ -332,9 +325,15 @@
     return account && account.meta
   }
 
+  function lookupView(selector) {
+    const node = document.querySelector(selector)
+    if (!(node && node.id)) return
+    return getApp().__container__.lookup('-view-registry:main')[node.id]
+  }
+
   function setEmailTo(responder) {
-    const emailTo = getEmailTo()
-    if (!emailTo && emailTo.options) return
+    const emailTo = lookupView(cssSelectors.noteEmailSelectField)
+    if (!(emailTo && emailTo.options)) return
 
     const selects = []
     const option = emailTo.options.content.find(option => option.id == responder.id)
@@ -348,8 +347,18 @@
   }
 
   function assignResponder() {
-    const responder = getResponder()
-    responder && updateResponder(responder.id)
+    const ticket = getTicket()
+
+    if (!(ticket && ticket.data)) return
+    if (ticket.responderId == ticket.data.responderId) return
+
+    updateResponder(ticket.responderId).then(data => {
+      const responderId = (data.ticket || {}).responder_id
+      ticket.set('data.responderId', responderId)
+      // trigger to update submit button
+      ticket.set('responderId', `${responderId}`)
+      ticket.set('responderId', responderId)
+    })
   }
 
   function isTicketPath() {
