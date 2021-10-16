@@ -54,7 +54,7 @@
   })
 
   window.addEventListener('resize', () => {
-    if (!isTicketPath() && !getTicket()) return
+    if (!isTicketPath() || !getTicket()) return
 
     locateNoteAgentDropdown()
   })
