@@ -22,6 +22,7 @@ Userscripts to add functionality to [Freshdesk][freshdesk].
  | Userscript Wiki                          | ![][ico] |  Direct<br>Install  |            Sites            |  Created   |  Updated   |
  | ---------------------------------------- | :------: | :-----------------: | :-------------------------: | :--------: | :--------: |
  | [Freshdesk ticket note agent][ftna-wiki] |          | [install][ftna-raw] | [GF][ftna-gf] [OU][ftna-ou] | 2021.10.13 | 2021.10.16 |
+  | [Freshdesk dashboard flexible tickets][fdft-wiki] |          | [install][fdft-raw] | [GF][fdft-gf] [OU][fdft-ou] | 2021.10.16 | 2021.10.16 |
 
   \* The ![][ico] column indicates that the userscript has been included in the [Freshdesk][freshdesk].
 
@@ -52,12 +53,16 @@ Please write unit test with your code if necessary.
 The gem is available as open source under the terms of the [MIT License](LICENSE).
 
 [ftna-wiki]: https://github.com/jinhucheung/freshdesk-userscripts/wiki/Freshdesk-Ticket-Note-Agent
+[fdft-wiki]: https://github.com/jinhucheung/freshdesk-userscripts/wiki/Freshdesk-Dashboard-Flexible-Tickets
 
 [ftna-raw]: https://raw.githubusercontent.com/jinhucheung/freshdesk-userscripts/main/freshdesk-ticket-note-agent.user.js
+[fdft-raw]: https://raw.githubusercontent.com/jinhucheung/freshdesk-userscripts/main/freshdesk-dashboard-flexible-tickets.user.js
 
 [ftna-gf]: https://greasyfork.org/en/scripts/433975-freshdesk-ticket-note-agent
+[fdft-gf]: https://greasyfork.org/en/scripts/_-freshdesk-dashboard-flexible-tickets
 
 [ftna-ou]: https://openuserjs.org/scripts/jinhucheung/Freshdesk_Ticket_Note_Agent
+[fdft-ou]: https://openuserjs.org/scripts/jinhucheung/Freshdesk_Dashboard_Flexible_Tickets
 
 [ico]: https://raw.githubusercontent.com/jinhucheung/freshdesk-userscripts/main/images/freshdesk.ico
 
